@@ -4,37 +4,26 @@ import axios from "axios";
 const API = "http://localhost:5000";
 
 function AddUserForm({ onAdd }) {
+  const [name,  setName]  = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [phone, setphone] = useState("");
-
-    const submit = async () => {
+  const submit = async () => {
     if (!name || !email || !phone) {
-      return onAdd(null, "Kindly fill all fields.");
+      return onAdd(null, "Please fill in all fields.");
     }
 
     try {
-      const res = await axios.post(`${API}/users`, {
-        name,
-        email,
-        phone
-      });
-
-      const user = res.data;
-
+      const res = await axios.post(`${API}/users`, { name, email, phone });
       setName("");
       setEmail("");
-      setphone("");
-
-      onAdd(user);
-
+      setPhone("");
+      onAdd(res.data);
+    } catch (err) {
+      onAdd(null, err.response?.data?.error || "Failed to add user.");
     }
-    catch (err) {
-      onAdd(null, "Failed to add user.");
-      }
   };
-  
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 mb-5 shadow-sm">
       <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
@@ -44,14 +33,15 @@ function AddUserForm({ onAdd }) {
 
         <input
           value={name}
-          onChange={event => setName(event.target.value)} 
-          placeholder="ZAIN"
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Full name"
+          type="text"
           className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-slate-50"
         />
 
         <input
           value={email}
-          onChange={event => setEmail(event.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
           placeholder="zain@abc.com"
           type="email"
           className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-slate-50"
@@ -59,9 +49,9 @@ function AddUserForm({ onAdd }) {
 
         <input
           value={phone}
-          onChange={event => setphone(event.target.value)}
+          onChange={(e) => setPhone(e.target.value)}
           placeholder="03001234567"
-          type="phone"
+          type="tel"
           className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-slate-50"
         />
 
