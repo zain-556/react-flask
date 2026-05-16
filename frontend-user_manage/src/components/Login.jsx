@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const API = "http://localhost:5000";
 
- function Login({ onSwitch }) {
+function Login({ onSwitch }) {
   const { login } = useAuth();
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -43,17 +43,17 @@ const API = "http://localhost:5000";
         <div className="flex flex-col gap-3">
           <input
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             type="email"
             className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-slate-50 focus:outline-none focus:border-slate-400"
           />
           <input
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             type="password"
-            onKeyDown={e => e.key === "Enter" && submit()}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
             className="px-3 py-2 border border-slate-200 rounded-md text-sm bg-slate-50 focus:outline-none focus:border-slate-400"
           />
         </div>
@@ -66,7 +66,17 @@ const API = "http://localhost:5000";
           {loading ? "Signing in..." : "Sign In"}
         </button>
 
-        <div className="mt-5 text-right text-xs text-slate-400">
+        {/* FIX: added bottom link row so both "Forgot password" and
+             "Create first admin" are reachable without being logged in.
+             Previously a fresh install had no way to bootstrap the first admin
+             — the Create Admin button was only visible after login. */}
+        <div className="mt-5 flex justify-between text-xs text-slate-400">
+          <button
+            onClick={() => onSwitch("register")}
+            className="hover:text-slate-700 transition"
+          >
+            Create first admin
+          </button>
           <button
             onClick={() => onSwitch("forgot")}
             className="hover:text-slate-700 transition"
@@ -79,4 +89,5 @@ const API = "http://localhost:5000";
     </div>
   );
 }
+
 export default Login;
