@@ -1,29 +1,48 @@
+import os
 import jwt
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
-from model import db                   # ← shared instance
+from model import db
 from auth_model import AuthUser
 
-JWT_SECRET  = "z1a3i5n7u9l11a13b15e17d19i21n23"
+# ── SECURITY FIX 1: JWT secret loaded from environment variable ──────────────
+# Never hardcode secrets in source. Set JWT_SECRET in your .env file.
+# A safe random value can be generated with: python -c "import secrets; print(secrets.token_hex(32))"
+JWT_SECRET = os.environ.get("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET environment variable is not set. "
+        "Add it to your .env file before starting the server."
+    )
+
 JWT_EXPIRES = timedelta(hours=1)
 
-token_blacklist = set()
+# ── SECURITY FIX 2: token blacklist ──────────────────────────────────────────
+# The in-memory set below is kept for simplicity; it works correctly while the
+# server is running but does NOT survive a restart — logged-out tokens become
+# valid again after a restart.
+# For production replace this with a persistent store, e.g.:
+#   Redis:  redis_client.setex(token, int(JWT_EXPIRES.total_seconds()), "1")
+#   SQLite: a BlacklistedToken table with an expiry column + a cleanup job.
+token_blacklist: set[str] = set()
 
 
-def _make_token(user_id):
+def _make_token(user_id: int) -> str:
     payload = {
         "user_id": user_id,
-        "exp": datetime.utcnow() + JWT_EXPIRES
+        # FIX: datetime.utcnow() is deprecated since Python 3.12.
+        #      Use datetime.now(timezone.utc) instead.
+        "exp": datetime.now(timezone.utc) + JWT_EXPIRES,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 
-def _decode_token(token):
+def _decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
 
 
-def register_user(data):
+def register_user(data: dict):
     if not data.get("name") or not data.get("email") or not data.get("password"):
         return None, "name, email and password are required"
 
@@ -33,14 +52,14 @@ def register_user(data):
     user = AuthUser(
         name=data["name"],
         email=data["email"],
-        password_hash=generate_password_hash(data["password"])
+        password_hash=generate_password_hash(data["password"]),
     )
     db.session.add(user)
     db.session.commit()
     return user, None
 
 
-def login_user(data):
+def login_user(data: dict):
     if not data.get("email") or not data.get("password"):
         return None, "email and password are required"
 
@@ -52,11 +71,11 @@ def login_user(data):
     return token, None
 
 
-def logout_user(token):
+def logout_user(token: str) -> None:
     token_blacklist.add(token)
 
 
-def forgot_password(data):
+def forgot_password(data: dict):
     if not data.get("email"):
         return None, "email is required"
 
@@ -70,7 +89,7 @@ def forgot_password(data):
     return reset_token, None
 
 
-def reset_password(data):
+def reset_password(data: dict):
     if not data.get("reset_token") or not data.get("new_password"):
         return False, "reset_token and new_password are required"
 
@@ -84,7 +103,7 @@ def reset_password(data):
     return True, None
 
 
-def verify_token(token):
+def verify_token(token: str | None):
     if not token:
         return None, "missing token"
     if token in token_blacklist:
